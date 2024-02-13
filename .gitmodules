@@ -1,0 +1,3 @@
+[submodule "submodules/harmonize"]
+	path = submodules/harmonize
+	url = https://github.com/CEMeNT-PSAAP/harmonize.git
