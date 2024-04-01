@@ -1,4 +1,5 @@
 #include "harmonize.cpp"
+#include "util/host.cpp"
 #include <string>
 #include <fstream>
 #include <sstream>
@@ -25,6 +26,70 @@ __host__ void readCSV(std::istream &file, std::vector<matrix_t> &data, size_t &r
         rows++;
     }
     printf("Read a %d x %d matrix\n", rows, cols);
+}
+
+// desc: Allocates a buffer on gpu and copies cpu buffer to it
+template <typename T> T* copy_to_gpu(T *data, size_t size) {
+  T *gpu_array;
+  auto_throw(cudaMalloc(&gpu_array,size*sizeof(T)));
+
+  auto_throw(cudaMemcpy(
+    gpu_array,
+    data,
+    size*sizeof(T),
+    cudaMemcpyHostToDevice
+  ));
+  auto_throw(cudaDeviceSynchronize());
+
+  return gpu_array;
+}
+
+// desc: Copies gpu buffer to cpu
+template <typename T> void copy_from_gpu(T *cpu_array, T *gpu_array, size_t size) {
+  auto_throw(cudaMemcpy(
+    cpu_array,
+    gpu_array,
+    size*sizeof(T),
+    cudaMemcpyDeviceToHost
+  ));
+  auto_throw(cudaDeviceSynchronize());
+}
+
+// (c) Sharma 2013
+__global__ void fixRow(matrix_t *matrix, int size, int rowId) {
+  // the ith row of the matrix
+  __shared__ matrix_t Ri[512];
+  // The diagonal element for ith row
+  __shared__ matrix_t Aii;
+  int sharedRowId = rowId; // TODO: Set this correctly
+  int colId = threadIdx.x;
+  Ri[colId] = matrix[size * rowId + colId];
+  Aii = matrix[size * rowId + sharedRowId];
+  __syncthreads();
+  // Divide the whole row by the diagonal element making sure it is not 0
+  Ri[colId] = Ri[colId] / Aii;
+  matrix[size * rowId + colId] = Ri[colId];
+}
+
+// (c) Sharma 2013
+__global__ void fixColumn(matrix_t *matrix, int size, int colId) {
+  int i = threadIdx.x;
+  int j = blockIdx.x;
+  // The colId column
+  __shared__ matrix_t col[512];
+  // The jth element of the colId row
+  __shared__ matrix_t AColIdj;
+  // The jth column
+  __shared__ matrix_t colj[512];
+  col[i] = matrix[i * size + colId];
+  if(col[i] != 0) {
+    colj[i] = matrix[i * size + j];
+    AColIdj = matrix[colId * size + j];
+    if (i != colId) {
+      colj[i] = colj[i] - AColIdj * col[i];
+    }
+    matrix[i * size + j] = colj[i];
+  }
 }
 
 int main(int argc, char *argv[]) {
