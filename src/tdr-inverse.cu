@@ -114,16 +114,34 @@ int main(int argc, char *argv[]) {
       printf("\n");
   }
 
+  matrix_t *data_gpu = copy_to_gpu<matrix_t>(data.data(), rows*cols);
+
   Stopwatch watch;
   watch.start();
 
   // Main program flow
+  for (size_t j = 0; j < rows; j++) {
+    fixRow<<<1, rows>>>(data_gpu, cols, j);
+    auto_throw(cudaDeviceSynchronize());
+
+    fixColumn<<<cols, rows>>>(data_gpu, rows, j);
+    auto_throw(cudaDeviceSynchronize());
+  }
 
   watch.stop();
 
   float msec = watch.ms_duration();
 
   printf("Runtime: %f\n", msec);
+
+  copy_from_gpu<matrix_t>(data.data(), data_gpu, rows*cols);
+
+  for (size_t i = 0; i < rows; i++) {
+      for (size_t j = 0; j < cols; j++) {
+          printf("%f, ", data[j + cols*i]);
+      }
+      printf("\n");
+  }
 
   return 0;
 }
