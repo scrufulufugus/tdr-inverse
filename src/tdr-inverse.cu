@@ -28,6 +28,30 @@ __host__ void readCSV(std::istream &file, std::vector<matrix_t> &data, size_t &r
     printf("Read a %d x %d matrix\n", rows, cols);
 }
 
+// Takes a matrix and outputs an augmented form
+__host__ void matrixToAug(const std::vector<matrix_t> &data, std::vector<matrix_t> &aug, const size_t &rows, const size_t &cols) {
+  for (size_t i = 0; i < rows; i++) {
+    for (size_t j = 0; j < cols; j++) {
+      aug.push_back(data[i*cols + j]);
+    }
+    for (size_t j = 0; j < cols; j++) {
+      if (i == j) {
+        aug.push_back(1);
+      } else {
+        aug.push_back(0);
+      }
+    }
+  }
+}
+
+__host__ void augToMatrix(std::vector<matrix_t> &data, const std::vector<matrix_t> &aug, const size_t &rows, const size_t &cols) {
+  for (size_t i = 0; i < rows; i++) {
+    for (size_t j = 0; j < cols; j++) {
+      data.push_back(aug[i*2*cols + j+cols]);
+    }
+  }
+}
+
 // desc: Allocates a buffer on gpu and copies cpu buffer to it
 template <typename T> T* copy_to_gpu(T *data, size_t size) {
   T *gpu_array;
@@ -116,17 +140,22 @@ int main(int argc, char *argv[]) {
       printf("\n");
   }
 
-  matrix_t *data_gpu = copy_to_gpu<matrix_t>(data.data(), rows*cols);
+  // Convert matrix to augmented form
+  std::vector<matrix_t> aug;
+  size_t aug_cols = 2*cols;
+  matrixToAug(data, aug, rows, cols);
+
+  matrix_t *data_gpu = copy_to_gpu<matrix_t>(aug.data(), rows*aug_cols);
 
   Stopwatch watch;
   watch.start();
 
   // Main program flow
   for (size_t j = 0; j < rows; j++) {
-    fixRow<<<1, rows>>>(data_gpu, cols, j);
+    fixRow<<<1, aug_cols>>>(data_gpu, aug_cols, j);
     auto_throw(cudaDeviceSynchronize());
 
-    fixColumn<<<cols, rows>>>(data_gpu, rows, j);
+    fixColumn<<<aug_cols, rows>>>(data_gpu, aug_cols, j);
     auto_throw(cudaDeviceSynchronize());
   }
 
@@ -136,7 +165,11 @@ int main(int argc, char *argv[]) {
 
   printf("Runtime: %f\n", msec);
 
-  copy_from_gpu<matrix_t>(data.data(), data_gpu, rows*cols);
+  copy_from_gpu<matrix_t>(aug.data(), data_gpu, rows*aug_cols);
+
+  // Convert matrix from augmented form
+  data.clear();
+  augToMatrix(data, aug, rows, cols);
 
   for (size_t i = 0; i < rows; i++) {
       for (size_t j = 0; j < cols; j++) {
