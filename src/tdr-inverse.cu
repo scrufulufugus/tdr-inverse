@@ -61,14 +61,15 @@ __global__ void fixRow(matrix_t *matrix, int size, int rowId) {
   __shared__ matrix_t Ri[512];
   // The diagonal element for ith row
   __shared__ matrix_t Aii;
-  int sharedRowId = rowId; // TODO: Set this correctly
   int colId = threadIdx.x;
   Ri[colId] = matrix[size * rowId + colId];
-  Aii = matrix[size * rowId + sharedRowId];
+  Aii = matrix[size * rowId + rowId]; // TODO: If Aii is zero we need to add a row first
+  printf("1. matrix[%d][%d] = %f\n", rowId, colId, Ri[colId]);
   __syncthreads();
   // Divide the whole row by the diagonal element making sure it is not 0
   Ri[colId] = Ri[colId] / Aii;
   matrix[size * rowId + colId] = Ri[colId];
+  printf("2. matrix[%d][%d] /= %f = %f\n", rowId, colId, Aii, Ri[colId]);
 }
 
 // (c) Sharma 2013
@@ -87,6 +88,7 @@ __global__ void fixColumn(matrix_t *matrix, int size, int colId) {
     AColIdj = matrix[colId * size + j];
     if (i != colId) {
       colj[i] = colj[i] - AColIdj * col[i];
+      printf("3. matrix[%d][%d] -= %f * %f = %f\n", i, j, AColIdj, col[i], colj[i]);
     }
     matrix[i * size + j] = colj[i];
   }
