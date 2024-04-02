@@ -52,6 +52,15 @@ __host__ void augToMatrix(std::vector<matrix_t> &data, const std::vector<matrix_
   }
 }
 
+__host__ __device__ void printMatrix(matrix_t *matrix, const size_t &rows, const size_t cols) {
+  for (size_t i = 0; i < rows; i++) {
+    for (size_t j = 0; j < cols; j++) {
+      printf("% 7f  ", matrix[j + cols*i]);
+    }
+    printf("\n");
+  }
+}
+
 // desc: Allocates a buffer on gpu and copies cpu buffer to it
 template <typename T> T* copy_to_gpu(T *data, size_t size) {
   T *gpu_array;
@@ -133,12 +142,7 @@ int main(int argc, char *argv[]) {
   }
   readCSV(file, data, rows, cols);
 
-  for (size_t i = 0; i < rows; i++) {
-      for (size_t j = 0; j < cols; j++) {
-          printf("%f, ", data[j + cols*i]);
-      }
-      printf("\n");
-  }
+  printMatrix(data.data(), rows, cols);
 
   // Convert matrix to augmented form
   std::vector<matrix_t> aug;
@@ -171,12 +175,7 @@ int main(int argc, char *argv[]) {
   data.clear();
   augToMatrix(data, aug, rows, cols);
 
-  for (size_t i = 0; i < rows; i++) {
-      for (size_t j = 0; j < cols; j++) {
-          printf("%f, ", data[j + cols*i]);
-      }
-      printf("\n");
-  }
+  printMatrix(data.data(), rows, cols);
 
   return 0;
 }
