@@ -9,12 +9,14 @@
   outputs = { self, nixpkgs, flake-utils, ... }:
     flake-utils.lib.eachDefaultSystem (system:
       let
-        pkgs = nixpkgs.legacyPackages.${system};
+        pkgs = import nixpkgs { inherit system; config.allowUnfree = true; };
       in
       {
-        devShells.default = pkgs.mkShell {
+        # TODO: Have to override with no CC since we're building with host CUDA
+        devShells.default = pkgs.mkShell.override { stdenv = pkgs.stdenvNoCC; } {
           packages = with pkgs; [
-            clang-tools
+            clang-tools # LSP code server
+            #cudaPackages_12_3
           ];
         };
       });
