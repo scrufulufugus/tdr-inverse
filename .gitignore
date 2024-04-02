@@ -1,3 +1,6 @@
+/tdr-inverse
+.direnv/
+result/
 *.i
 *.ii
 *.gpu
