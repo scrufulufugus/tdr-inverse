@@ -196,7 +196,9 @@ int main(int argc, char *argv[]) {
   std::vector<matrix_t> data;
   readCSV(matrixFile, data, rows, cols);
 
+#ifdef DEBUG
   printMatrix(data.data(), rows, cols);
+#endif
 
   // Convert matrix to augmented form
   std::vector<matrix_t> aug;
