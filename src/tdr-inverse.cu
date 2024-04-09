@@ -200,6 +200,11 @@ int main(int argc, char *argv[]) {
   printMatrix(data.data(), rows, cols);
 #endif
 
+  // Timing objects
+  cudaEvent_t start, stop;
+  cudaEventCreate(&start);
+  cudaEventCreate(&stop);
+
   // Convert matrix to augmented form
   std::vector<matrix_t> aug;
   size_t aug_cols = 2 * cols;
@@ -207,8 +212,7 @@ int main(int argc, char *argv[]) {
 
   matrix_t *data_gpu = copy_to_gpu<matrix_t>(aug.data(), rows * aug_cols);
 
-  Stopwatch watch;
-  watch.start();
+  cudaEventRecord(start);
 
   // Main program flow
   for (size_t j = 0; j < rows; j++) {
@@ -219,9 +223,11 @@ int main(int argc, char *argv[]) {
     auto_throw(cudaDeviceSynchronize());
   }
 
-  watch.stop();
+  cudaEventRecord(stop);
 
-  float msec = watch.ms_duration();
+  cudaEventSynchronize(stop);
+  float msec;
+  cudaEventElapsedTime(&msec, start, stop);
 
   printf("Runtime: %f\n", msec);
 
