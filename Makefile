@@ -10,7 +10,7 @@ all: tdr-inverse
 # Must run `make clean` first if source has not changed.
 .PHONY: debug
 debug: CXXFLAGS += -g -DDEBUG
-debug: all
+debug: clean all
 
 tdr-inverse: $(SRC_DIR)/tdr-inverse.cu
 	$(CXX) $(CPPFLAGS) $(CXXFLAGS) -o $@ $^
