@@ -1,11 +1,10 @@
-#include "harmonize.cpp"
 #include "utils.h"
 #include <cstdio>
 #include <fstream>
 #include <string>
 #include <vector>
 
-using namespace util;
+using namespace helpers;
 
 const int MAX_BLOCK_SIZE = 1024;
 
@@ -58,8 +57,6 @@ __global__ void fixColumn(matrix_t *matrix, int size, int colId) {
 
 int main(int argc, char *argv[]) {
 
-  cli::ArgSet args(argc, argv);
-
   std::ifstream matrixFile;
   std::ifstream solnFile;
   get_args(argc, argv, matrixFile, solnFile);
@@ -111,6 +108,10 @@ int main(int argc, char *argv[]) {
   // Convert matrix from augmented form
   data.clear();
   augToMatrix(data, aug, rows, cols);
+
+#ifdef DEBUG
+  printMatrix(data.data(), rows, cols);
+#endif
 
   for (size_t i = 0; i < soln.size(); i++) {
     if (std::abs(data[i] - soln[i]) > 0.0000001) {

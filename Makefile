@@ -19,4 +19,4 @@ inverse: $(SRC_DIR)/inverse.cu $(SRC_DIR)/utils.cu
 
 .PHONY: clean
 clean:
-	$(RM) tdr-inverse
+	$(RM) tdr-inverse inverse

@@ -1,6 +1,6 @@
 #include "utils.h"
 
-void auto_throw(cudaError_t value) {
+void helpers::auto_throw(cudaError_t value) {
   if (value != cudaSuccess) { throw value; }
 }
 
