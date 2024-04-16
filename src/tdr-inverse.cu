@@ -66,7 +66,7 @@ struct Size2D {
 };
 
 struct InverseState {
-  size_t j;
+  size_t *j;
   Size2D size;
   matrix_t *matrix;
   iter::AtomicIter<unsigned int>* iterator;
@@ -129,7 +129,7 @@ struct InverseSpec {
 
       unsigned int index;
       while(iter.step(index)){
-        size_t rowId = prog.device.j;
+        size_t rowId = *(prog.device.j);
         size_t colId = index;
         prog.template async<FixRow>(rowId, colId);
       }
@@ -188,12 +188,15 @@ int main(int argc, char *argv[]) {
   // can know where to put its output.
   ds.matrix = data_gpu;
 
+  host::DevBuf<size_t> j = host::DevBuf<size_t>();
+  j << 1;
+  ds.j = j;
+
   cudaEventRecord(start);
 
-  for (ds.j = 0; ds.j < ds.size.col; ds.j++) {
     iter::AtomicIter<unsigned int> host_iter(0,ds.size.row);
     host::DevBuf<iter::AtomicIter<unsigned int>> iterator;
-    iterator << host_iter;
+    iterator << host_iter; // Without this we get an access exception even though we set it later
     ds.iterator = iterator;
 
     // Declare and instance of type 'ProgType' with an arena size of 2^(20) with a device state
@@ -210,6 +213,12 @@ int main(int argc, char *argv[]) {
     cudaDeviceSynchronize();
     host::check_error();
 
+  for (size_t cj = 0; cj < ds.size.col; cj++) {
+    j << cj; // Push current row to gpu
+
+    // Reset iter
+    iter::AtomicIter<unsigned int> host_iter(0,ds.size.row);
+    iterator << host_iter;
 
     // Execute the instance using 240 work groups, with each work group performing up to
     // 65536 promise executions per thread before halting. If all promises are exhausted
