@@ -67,7 +67,7 @@ __host__ void readCSV(std::istream &file, std::vector<matrix_t> &data,
     }
     rows++;
   }
-  printf("Read a %d x %d matrix\n", rows, cols);
+  printf("Read a %lu x %lu matrix\n", rows, cols);
 }
 
 // Takes a matrix and outputs an augmented form
