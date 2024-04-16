@@ -114,7 +114,7 @@ int main(int argc, char *argv[]) {
 #endif
 
   for (size_t i = 0; i < soln.size(); i++) {
-    if (std::abs(data[i] - soln[i]) > 0.0000001) {
+    if (!std::isfinite(data[i]) || std::abs(data[i] - soln[i]) > 0.0000001) {
       fprintf(stderr, "matrix[%zu][%zu] expected % 7f got % 7f\n", i / cols,
               i % cols, soln[i], data[i]);
     }
