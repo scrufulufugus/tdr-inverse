@@ -126,12 +126,18 @@ int main(int argc, char *argv[]) {
   printMatrix(data.data(), rows, cols);
 #endif
 
+  long double error;
+  long double mae;
   for (size_t i = 0; i < soln.size(); i++) {
-    if (!std::isfinite(data[i]) || std::abs(data[i] - soln[i]) > 0.0000001) {
-      fprintf(stderr, "matrix[%zu][%zu] expected % 7f got % 7f\n", i / cols,
-              i % cols, soln[i], data[i]);
+    error = std::abs(data[i] - soln[i]) / std::max(std::abs(soln[i]), std::abs(data[i]));
+    mae += std::abs(data[i] - soln[i]);
+    if (!std::isfinite(data[i]) || error > 0.0001) {
+      fprintf(stderr, "matrix[%zu][%zu] expected % E got % E Error: %LE\n", i / cols,
+              i % cols, soln[i], data[i], error);
     }
   }
+  mae /= soln.size();
+  fprintf(stderr, "Mean Absolute Error: %LE\n", mae);
   // printMatrix(data.data(), rows, cols);
 
   return 0;
