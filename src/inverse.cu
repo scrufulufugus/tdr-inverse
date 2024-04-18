@@ -6,7 +6,7 @@
 
 using namespace helpers;
 
-const int MAX_BLOCK_SIZE = 1024;
+#define MAX_BLOCK_SIZE 1024
 
 __global__ void pivot(matrix_t *matrix, int cols, int rows, int j) {
   // the ith row of the matrix
@@ -43,8 +43,8 @@ __global__ void fixRow(matrix_t *matrix, int size, int rowId) {
   __shared__ matrix_t Aii;
   int colId = threadIdx.x;
   Ri[colId] = matrix[size * rowId + colId];
-  Aii = matrix[size * rowId +
-               rowId]; // TODO: If Aii is zero we need to add a row first
+  Aii = matrix[size * rowId + rowId];
+
 #ifdef DEBUG
   printf("1. matrix[%d][%d] = %f\n", rowId, colId, Ri[colId]);
 #endif
@@ -72,7 +72,12 @@ __global__ void fixColumn(matrix_t *matrix, int size, int colId) {
     colj[i] = matrix[i * size + j];
     AColIdj = matrix[colId * size + j];
     if (i != colId) {
-      colj[i] = colj[i] - AColIdj * col[i];
+#if   PRECISION == 1
+      colj[i] = fmaf(-1. * AColIdj, col[i], colj[i]);
+#elif PRECISION == 2
+      colj[i] = fma(-1. * AColIdj, col[i], colj[i]);
+#endif
+      //colj[i] = colj[i] - AColIdj * col[i];
 #ifdef DEBUG
       printf("3. matrix[%d][%d] -= %f * %f = %f\n", i, j, AColIdj, col[i],
              colj[i]);

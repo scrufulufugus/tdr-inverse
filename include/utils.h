@@ -1,11 +1,22 @@
 #include <fstream>
 #include <sstream>
 #include <vector>
+#include <cfloat>
+
+#ifndef PRECISION
+#define PRECISION 2
+#endif
 
 #ifndef UTILS_H_
 #define UTILS_H_
 
+#if   PRECISION == 1
 typedef float matrix_t;
+#define SIGFIGS FLT_DECIMAL_DIG
+#elif PRECISION == 2
+typedef double matrix_t;
+#define SIGFIGS DBL_DECIMAL_DIG
+#endif
 
 void bad_usage(char *exec);
 
