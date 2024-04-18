@@ -34,10 +34,6 @@ void get_args(int argc, char *argv[], std::ifstream &matrixFile,
   // TODO: Allow only one file and guess others name
   std::string soln_filename(argv[2]);
 
-  if (matrix_filename.compare(soln_filename) == 0) {
-    bad_usage(argv[0]);
-  }
-
   matrixFile.open(matrix_filename);
   if (!matrixFile) {
     fprintf(stderr, "Cannot read file: %s\n", matrix_filename.c_str());
@@ -98,8 +94,8 @@ __host__ void augToMatrix(std::vector<matrix_t> &data,
   }
 }
 
-__host__ __device__ void printMatrix(matrix_t *matrix, const size_t &rows,
-                                     const size_t cols) {
+__host__ __device__ void printMatrix(matrix_t *matrix, size_t rows,
+                                     size_t cols) {
   for (size_t i = 0; i < rows; i++) {
     for (size_t j = 0; j < cols; j++) {
       printf("% 7f  ", matrix[j + cols * i]);

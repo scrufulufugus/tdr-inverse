@@ -17,7 +17,7 @@ __host__ void matrixToAug(const std::vector<matrix_t> &data, std::vector<matrix_
 
 __host__ void augToMatrix(std::vector<matrix_t> &data, const std::vector<matrix_t> &aug, const size_t &rows, const size_t &cols);
 
-__host__ __device__ void printMatrix(matrix_t *matrix, const size_t &rows, const size_t cols);
+__host__ __device__ void printMatrix(matrix_t *matrix, size_t rows, size_t cols);
 
 namespace helpers {
   void auto_throw(cudaError_t value);
