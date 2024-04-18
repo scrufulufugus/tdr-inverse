@@ -8,6 +8,33 @@ using namespace helpers;
 
 const int MAX_BLOCK_SIZE = 1024;
 
+__global__ void pivot(matrix_t *matrix, int cols, int rows, int j) {
+  // the ith row of the matrix
+  __shared__ matrix_t Ri[MAX_BLOCK_SIZE];
+  int colId = threadIdx.x;
+  Ri[colId] = matrix[cols * j + colId];
+
+  // Pivot
+  int swapRow = j;
+  for (int i = j; i < rows; i++) {
+    if (abs(matrix[cols*i + j]) > abs(matrix[cols*swapRow + j])) {
+      swapRow = i;
+    }
+  }
+
+  Ri[colId] = matrix[cols * swapRow + colId];
+  if (swapRow != j) {
+    __syncthreads();
+#ifdef DEBUG
+    printf("1. swap(M[%d][%d], M[%d][%d]) = swap(%f, %f)\n", j, colId, swapRow, colId,
+           matrix[cols * j + colId], matrix[cols * swapRow + colId]);
+#endif
+    matrix[cols * swapRow + colId] = matrix[cols * j + colId];
+  }
+  __syncthreads();
+  matrix[cols * j + colId] = Ri[colId];
+}
+
 // (c) Sharma 2013
 __global__ void fixRow(matrix_t *matrix, int size, int rowId) {
   // the ith row of the matrix
@@ -88,6 +115,9 @@ int main(int argc, char *argv[]) {
 
   // Main program flow
   for (size_t j = 0; j < rows; j++) {
+    pivot<<<1, aug_cols>>>(data_gpu, aug_cols, rows, j);
+    auto_throw(cudaDeviceSynchronize());
+
     fixRow<<<1, aug_cols>>>(data_gpu, aug_cols, j);
     auto_throw(cudaDeviceSynchronize());
 
