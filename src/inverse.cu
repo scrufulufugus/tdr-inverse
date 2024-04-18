@@ -16,21 +16,8 @@ __global__ void fixRow(matrix_t *matrix, int size, int rowId) {
   __shared__ matrix_t Aii;
   int colId = threadIdx.x;
   Ri[colId] = matrix[size * rowId + colId];
-  Aii = matrix[size * rowId + rowId];
-
-  // Pivot if row is singular
-  int i = 0;
-  while (Aii == 0.) {
-    if (matrix[size * i + rowId] != 0) {
-#ifdef DEBUG
-      printf("1. matrix[%d][%d] += matrix[%d][%d]\n", rowId, colId, i, colId);
-#endif
-      Ri[colId] += matrix[size * i + colId];
-      Aii = Ri[rowId];
-      break;
-    }
-    i++;
-  }
+  Aii = matrix[size * rowId +
+               rowId]; // TODO: If Aii is zero we need to add a row first
 #ifdef DEBUG
   printf("1. matrix[%d][%d] = %f\n", rowId, colId, Ri[colId]);
 #endif
