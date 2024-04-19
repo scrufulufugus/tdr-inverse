@@ -1,6 +1,6 @@
 CXX       = nvcc
 CPPFLAGS  = -x cu --restrict -Isubmodules/harmonize -Iinclude
-CXXFLAGS  = -std=c++17 -ftz=true --use_fast_math --prec-div=true
+CXXFLAGS  = -std=c++17 --ftz=true --use_fast_math --prec-div=true
 
 SRC_DIR  := src
 
@@ -11,10 +11,10 @@ all: tdr-inverse inverse
 debug: CXXFLAGS += -g -DDEBUG
 debug: clean all
 
-tdr-inverse: $(SRC_DIR)/tdr-inverse.cu $(SRC_DIR)/utils.cu
+tdr-inverse: $(SRC_DIR)/tdr-inverse.cu $(SRC_DIR)/utils.cpp
 	$(CXX) $(CPPFLAGS) $(CXXFLAGS) -o $@ $^
 
-inverse: $(SRC_DIR)/inverse.cu $(SRC_DIR)/utils.cu
+inverse: $(SRC_DIR)/inverse.cu $(SRC_DIR)/utils.cpp
 	$(CXX) $(CPPFLAGS) $(CXXFLAGS) -o $@ $^
 
 .PHONY: clean
