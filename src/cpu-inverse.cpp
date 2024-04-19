@@ -29,13 +29,14 @@ void fixRows(matrix_t *matrix, size_t size, size_t rowId) {
 }
 
 void fixColumns(matrix_t *matrix, size_t cols, size_t rows, size_t colId) {
-  for (size_t r = colId+1; (r%cols) != colId; r++) {
-    for (size_t i = 0; i < rows; i++) {
-      if (matrix[cols * i + colId] != 0.0 && i != colId) {
+  for (size_t i = 0; i < rows; i++) {
+    matrix_t Aii = matrix[cols * i + colId];
+    for (size_t r = 0; r < cols; r++) {
+      if (Aii != 0.0 && i != colId) {
 #ifdef DEBUG
         matrix_t Air = matrix[cols * i + r];
 #endif
-        matrix[cols * i + r] -= matrix[cols * colId + r] * matrix[cols * i + colId];
+        matrix[cols * i + r] -= matrix[cols * colId + r] * Aii;
 #ifdef DEBUG
         printf("3. M[%lu][%lu] = M[%lu][%lu] - M[%lu][%lu] * M[%lu][%lu] = %f - %f * %f = %f\n",
                i, r, i, r, colId, r, i, colId,

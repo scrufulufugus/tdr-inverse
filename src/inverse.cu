@@ -59,8 +59,8 @@ __global__ void fixRow(matrix_t *matrix, int size, int rowId) {
 
 // (c) Sharma 2013
 __global__ void fixColumn(matrix_t *matrix, int size, int colId) {
-  int i = threadIdx.x;
-  int j = blockIdx.x;
+  int i = blockIdx.x;
+  int j = threadIdx.x;
   // The colId column
   __shared__ matrix_t col[MAX_BLOCK_SIZE];
   // The jth element of the colId row
@@ -68,6 +68,7 @@ __global__ void fixColumn(matrix_t *matrix, int size, int colId) {
   // The jth column
   __shared__ matrix_t colj[MAX_BLOCK_SIZE];
   col[i] = matrix[i * size + colId];
+  __syncthreads();
   if (col[i] != 0) {
     colj[i] = matrix[i * size + j];
     AColIdj = matrix[colId * size + j];
@@ -126,7 +127,7 @@ int main(int argc, char *argv[]) {
     fixRow<<<1, aug_cols>>>(data_gpu, aug_cols, j);
     auto_throw(cudaDeviceSynchronize());
 
-    fixColumn<<<aug_cols, rows>>>(data_gpu, aug_cols, j);
+    fixColumn<<<rows, aug_cols>>>(data_gpu, aug_cols, j);
     auto_throw(cudaDeviceSynchronize());
   }
 
