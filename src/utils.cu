@@ -1,8 +1,10 @@
 #include "utils.h"
 
+#if defined(__CUDACC__) || defined(__NVCC__)
 void helpers::auto_throw(cudaError_t value) {
   if (value != cudaSuccess) { throw value; }
 }
+#endif
 
 std::string const USAGE = "matrixfile [solnfile]";
 
@@ -47,7 +49,7 @@ void get_args(int argc, char *argv[], std::ifstream &matrixFile,
 }
 
 // Read a comma seperated CSV into memory.
-__host__ void readCSV(std::istream &file, std::vector<matrix_t> &data,
+void readCSV(std::istream &file, std::vector<matrix_t> &data,
                       size_t &rows, size_t &cols) {
   rows = 0;
   cols = 0;
@@ -67,7 +69,7 @@ __host__ void readCSV(std::istream &file, std::vector<matrix_t> &data,
 }
 
 // Takes a matrix and outputs an augmented form
-__host__ void matrixToAug(const std::vector<matrix_t> &data,
+void matrixToAug(const std::vector<matrix_t> &data,
                           std::vector<matrix_t> &aug, const size_t &rows,
                           const size_t &cols) {
   for (size_t i = 0; i < rows; i++) {
@@ -84,7 +86,7 @@ __host__ void matrixToAug(const std::vector<matrix_t> &data,
   }
 }
 
-__host__ void augToMatrix(std::vector<matrix_t> &data,
+void augToMatrix(std::vector<matrix_t> &data,
                           const std::vector<matrix_t> &aug, const size_t &rows,
                           const size_t &cols) {
   for (size_t i = 0; i < rows; i++) {
@@ -94,7 +96,7 @@ __host__ void augToMatrix(std::vector<matrix_t> &data,
   }
 }
 
-__host__ __device__ void printMatrix(matrix_t *matrix, size_t rows,
+void printMatrix(matrix_t *matrix, size_t rows,
                                      size_t cols) {
   for (size_t i = 0; i < rows; i++) {
     for (size_t j = 0; j < cols; j++) {

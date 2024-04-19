@@ -22,14 +22,15 @@ void bad_usage(char *exec);
 
 void get_args(int argc, char *argv[], std::ifstream &matrixFile, std::ifstream &solnFile);
 
-__host__ void readCSV(std::istream &file, std::vector<matrix_t> &data, size_t &rows, size_t &cols);
+void readCSV(std::istream &file, std::vector<matrix_t> &data, size_t &rows, size_t &cols);
 
-__host__ void matrixToAug(const std::vector<matrix_t> &data, std::vector<matrix_t> &aug, const size_t &rows, const size_t &cols);
+void matrixToAug(const std::vector<matrix_t> &data, std::vector<matrix_t> &aug, const size_t &rows, const size_t &cols);
 
-__host__ void augToMatrix(std::vector<matrix_t> &data, const std::vector<matrix_t> &aug, const size_t &rows, const size_t &cols);
+void augToMatrix(std::vector<matrix_t> &data, const std::vector<matrix_t> &aug, const size_t &rows, const size_t &cols);
 
-__host__ __device__ void printMatrix(matrix_t *matrix, size_t rows, size_t cols);
+void printMatrix(matrix_t *matrix, size_t rows, size_t cols);
 
+#if defined(__CUDACC__) || defined(__NVCC__)
 namespace helpers {
   void auto_throw(cudaError_t value);
 
@@ -53,5 +54,6 @@ namespace helpers {
     auto_throw(cudaDeviceSynchronize());
   }
 };
+#endif
 
 #endif // UTILS_H_
