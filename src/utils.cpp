@@ -1,4 +1,5 @@
 #include "utils.h"
+#include <cmath>
 
 #if defined(__CUDACC__) || defined(__NVCC__)
 void helpers::auto_throw(cudaError_t value) {
@@ -104,4 +105,22 @@ void printMatrix(matrix_t *matrix, size_t rows,
     }
     printf("\n");
   }
+}
+
+void printError(matrix_t *matrix, matrix_t *soln, size_t rows, size_t cols) {
+  long double error;
+  long double mae = 0;
+  for (size_t i = 0; i < rows; i++) {
+    for (size_t j = 0; j < cols; j++) {
+      size_t idx = i * cols + j;
+      error = std::abs(matrix[idx] - soln[idx]) / std::max(std::abs(soln[idx]), std::abs(matrix[idx]));
+      mae += std::abs((long double)matrix[idx] - soln[idx]);
+      if (!std::isfinite(matrix[idx]) || error > 0.0000001) {
+        fprintf(stderr, "matrix[%zu][%zu] expected % E got % E Error: %LE\n", i,
+                j, soln[idx], matrix[idx], error);
+      }
+    }
+  }
+  mae /= (long double)(rows * cols);
+  fprintf(stderr, "Mean Absolute Error: %LE\n", mae);
 }

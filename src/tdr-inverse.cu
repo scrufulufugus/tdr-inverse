@@ -247,13 +247,7 @@ int main(int argc, char *argv[]) {
   printMatrix(data.data(), rows, cols);
 #endif
 
-  for (size_t i = 0; i < soln.size(); i++) {
-    if (!std::isfinite(data[i]) || std::abs(data[i] - soln[i]) > 0.0000001) {
-      fprintf(stderr, "matrix[%zu][%zu] expected % 7f got % 7f\n", i / cols,
-              i % cols, soln[i], data[i]);
-    }
-  }
-  // printMatrix(data.data(), rows, cols);
+  printError(data.data(), soln.data(), rows, cols);
 
   return 0;
 }

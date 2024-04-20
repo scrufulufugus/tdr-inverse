@@ -30,6 +30,8 @@ void augToMatrix(std::vector<matrix_t> &data, const std::vector<matrix_t> &aug, 
 
 void printMatrix(matrix_t *matrix, size_t rows, size_t cols);
 
+void printError(matrix_t *matrix, matrix_t *soln, size_t rows, size_t cols);
+
 #if defined(__CUDACC__) || defined(__NVCC__)
 namespace helpers {
   void auto_throw(cudaError_t value);
