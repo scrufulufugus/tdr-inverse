@@ -3,6 +3,7 @@ CPPFLAGS  = -x cu --restrict -Isubmodules/harmonize -Iinclude
 CXXFLAGS  = -std=c++17 --ftz=true --use_fast_math --prec-div=true
 
 SRC_DIR  := src
+BIN_DIR  := bin
 
 .PHONY: all
 all: tdr-inverse cpu-inverse inverse
@@ -11,15 +12,18 @@ all: tdr-inverse cpu-inverse inverse
 debug: CXXFLAGS += -g -DDEBUG
 debug: clean all
 
-tdr-inverse: $(SRC_DIR)/tdr-inverse.cu $(SRC_DIR)/utils.cpp
+tdr-inverse: $(BIN_DIR)/tdr-inverse
+
+inverse: $(BIN_DIR)/inverse
+
+cpu-inverse: $(BIN_DIR)/cpu-inverse
+
+$(BIN_DIR)/%: $(SRC_DIR)/%.cu $(SRC_DIR)/utils.cpp
 	$(CXX) $(CPPFLAGS) $(CXXFLAGS) -o $@ $^
 
-inverse: $(SRC_DIR)/inverse.cu $(SRC_DIR)/utils.cpp
-	$(CXX) $(CPPFLAGS) $(CXXFLAGS) -o $@ $^
-
-cpu-inverse: $(SRC_DIR)/cpu-inverse.cpp $(SRC_DIR)/utils.cpp
+$(BIN_DIR)/%: $(SRC_DIR)/%.cpp $(SRC_DIR)/utils.cpp
 	$(CXX) $(CPPFLAGS) $(CXXFLAGS) -o $@ $^
 
 .PHONY: clean
 clean:
-	$(RM) tdr-inverse cpu-inverse inverse
+	$(RM) $(BIN_DIR)/*
