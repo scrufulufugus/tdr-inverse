@@ -1,5 +1,5 @@
 CXX       = nvcc
-CPPFLAGS  = -x cu --restrict -Isubmodules/harmonize -Iinclude
+CPPFLAGS  = -x cu --restrict -Isubmodules/harmonize/harmonize/cpp -Iinclude
 CXXFLAGS  = -std=c++17 --ftz=true --use_fast_math --prec-div=true
 
 SRC_DIR  := src

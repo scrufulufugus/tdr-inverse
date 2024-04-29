@@ -1,4 +1,4 @@
-#include "harmonize.cpp"
+#include "harmonize.h"
 #include "utils.h"
 #include <cstdio>
 #include <fstream>
@@ -163,7 +163,7 @@ struct InverseSpec {
 
 };
 
-typedef  HarmonizeProgram < InverseSpec > ProgType;
+using ProgType = AsyncProgram < InverseSpec >;
 
 int main(int argc, char *argv[]) {
 
