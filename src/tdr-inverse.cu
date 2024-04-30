@@ -7,6 +7,19 @@
 
 using namespace util;
 
+__global__ void storeAij(matrix_t *matrix, int size, matrix_t *Aij, int colId) {
+  int rowId = threadIdx.x;
+  Aij[rowId] = matrix[size*rowId + colId];
+#ifdef DEBUG
+  printf("0. A[%d][%d] = %f\n", rowId, colId, Aij[rowId]);
+#endif
+
+  if (rowId == colId)
+    matrix[size*rowId + colId] = 1.0;
+  else
+    matrix[size*rowId + colId] = 0.0;
+}
+
 //struct Inverse { matrix_t *matrix, size_t size, size_t loc };
 
 struct FixRow;
@@ -19,7 +32,7 @@ struct FixRow {
   __device__ static void eval(PROGRAM prog, size_t rowId, size_t colId) {
     size_t size = prog.device.size.row;
     matrix_t Ri  = prog.device.matrix[size*rowId + colId];
-    matrix_t Aii = prog.device.matrix[size*rowId + rowId];
+    matrix_t Aii = prog.device.Aij[rowId];
 
 #ifdef DEBUG
     printf("1. matrix[%lu][%lu] = %f\n", rowId, colId, Ri);
@@ -33,7 +46,7 @@ struct FixRow {
 #endif
 
     for (size_t i = 0; i < prog.device.size.col; i++) {
-      matrix_t col = prog.device.matrix[i*size + rowId];
+      matrix_t col = prog.device.Aij[i];
       if (col != 0) {
         prog.template async<FixCol>(rowId, i, colId, col);
       }
@@ -69,6 +82,7 @@ struct InverseState {
   size_t *j;
   Size2D size;
   matrix_t *matrix;
+  matrix_t *Aij;
   iter::AtomicIter<unsigned int>* iterator;
 };
 
@@ -172,18 +186,18 @@ int main(int argc, char *argv[]) {
   cudaEventCreate(&start);
   cudaEventCreate(&stop);
 
-  // Convert matrix to augmented form
-  std::vector<matrix_t> aug;
-  size_t aug_cols = 2 * cols;
-  matrixToAug(data, aug, rows, cols);
-
   InverseState ds;
 
-  ds.size.row = aug_cols;
+  ds.size.row = cols;
   ds.size.col = rows;
 
+  //host::DevBuf<matrix_t> Aij = host::DevBuf<matrix_t>(rows);
+  //ds.Aij = Aij;
+  cudaMalloc(&(ds.Aij), rows * sizeof(matrix_t));
+  host::check_error();
+
   host::DevBuf<matrix_t> data_gpu = host::DevBuf<matrix_t>(ds.size.row * ds.size.col);
-  data_gpu << aug;
+  data_gpu << data;
   // Assign the address of the device-side buffer to the device state so that the program
   // can know where to put its output.
   ds.matrix = data_gpu;
@@ -220,6 +234,10 @@ int main(int argc, char *argv[]) {
     iter::AtomicIter<unsigned int> host_iter(0,ds.size.row);
     iterator << host_iter;
 
+    storeAij<<<1, rows>>>(ds.matrix, ds.size.row, ds.Aij, cj);
+    cudaDeviceSynchronize();
+    host::check_error();
+
     // Execute the instance using 240 work groups, with each work group performing up to
     // 65536 promise executions per thread before halting. If all promises are exhausted
     // before this, the program exits early.
@@ -236,12 +254,9 @@ int main(int argc, char *argv[]) {
 
   printf("Runtime: %f\n", msec);
 
-  aug.clear();
-  data_gpu >> aug;
 
-  // Convert matrix from augmented form
   data.clear();
-  augToMatrix(data, aug, rows, cols);
+  data_gpu >> data;
 
 #ifdef DEBUG
   printMatrix(data.data(), rows, cols);
