@@ -14,8 +14,8 @@ using TimeSpan = std::chrono::duration<double>;
 
 void fixRows(matrix_t *matrix, size_t size, size_t rowId) {
 #ifdef DEBUG
-  for (size_t i = 0; i < aug_cols; i++) {
-    printf("1. M[%lu][%lu] = %f\n", j, i, aug[aug_cols * j + i]);
+  for (size_t i = 0; i < size; i++) {
+    printf("1. M[%lu][%lu] = %f\n", rowId, i, matrix[size * rowId + i]);
   }
 #endif
 
@@ -23,7 +23,7 @@ void fixRows(matrix_t *matrix, size_t size, size_t rowId) {
   for (size_t i = 0; i < size; i++) {
     matrix[size * rowId + i] /= Aii;
 #ifdef DEBUG
-    printf("2. matrix[%lu][%lu] /= %f = %f\n", j, i, Aii, aug[aug_cols * j + i]);
+    printf("2. matrix[%lu][%lu] /= %f = %f\n", rowId, i, Aii, matrix[size * rowId + i]);
 #endif
   }
 }
