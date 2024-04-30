@@ -31,19 +31,22 @@ __global__ void pivot(matrix_t *matrix, int cols, int rows, int j) {
 #endif
     matrix[cols * swapRow + colId] = matrix[cols * j + colId];
   }
-  __syncthreads();
-  matrix[cols * j + colId] = Ri[colId];
+}
+
+__global__ void storeAij(matrix_t *matrix, int size, matrix_t *Aij, int colId) {
+  int rowId = threadIdx.x;
+  Aij[rowId] = matrix[size*rowId + colId];
 }
 
 // (c) Sharma 2013
-__global__ void fixRow(matrix_t *matrix, int size, int rowId) {
+__global__ void fixRow(matrix_t *matrix, int size, matrix_t *Aij, int rowId) {
   // the ith row of the matrix
   __shared__ matrix_t Ri[MAX_BLOCK_SIZE];
   // The diagonal element for ith row
   __shared__ matrix_t Aii;
   int colId = threadIdx.x;
   Ri[colId] = matrix[size * rowId + colId];
-  Aii = matrix[size * rowId + rowId];
+  Aii = Aij[rowId];
 
 #ifdef DEBUG
   printf("1. matrix[%d][%d] = %f\n", rowId, colId, Ri[colId]);
@@ -58,16 +61,16 @@ __global__ void fixRow(matrix_t *matrix, int size, int rowId) {
 }
 
 // (c) Sharma 2013
-__global__ void fixColumn(matrix_t *matrix, int size, int colId) {
-  int i = blockIdx.x;
-  int j = threadIdx.x;
+__global__ void fixColumn(matrix_t *matrix, int size, matrix_t *Aij, int colId) {
+  int i = threadIdx.x;
+  int j = blockIdx.x;
   // The colId column
   __shared__ matrix_t col[MAX_BLOCK_SIZE];
   // The jth element of the colId row
   __shared__ matrix_t AColIdj;
   // The jth column
   __shared__ matrix_t colj[MAX_BLOCK_SIZE];
-  col[i] = matrix[i * size + colId];
+  col[i] = Aij[i];
   __syncthreads();
   if (col[i] != 0) {
     colj[i] = matrix[i * size + j];
@@ -116,6 +119,8 @@ int main(int argc, char *argv[]) {
   matrixToAug(data, aug, rows, cols);
 
   matrix_t *data_gpu = copy_to_gpu<matrix_t>(aug.data(), rows * aug_cols);
+  matrix_t *Aij;
+  auto_throw(cudaMalloc(&Aij, rows * sizeof(matrix_t)));
 
   cudaEventRecord(start);
 
@@ -124,10 +129,13 @@ int main(int argc, char *argv[]) {
     pivot<<<1, aug_cols>>>(data_gpu, aug_cols, rows, j);
     auto_throw(cudaDeviceSynchronize());
 
-    fixRow<<<1, aug_cols>>>(data_gpu, aug_cols, j);
+    storeAij<<<1, rows>>>(data_gpu, aug_cols, Aij, j);
     auto_throw(cudaDeviceSynchronize());
 
-    fixColumn<<<rows, aug_cols>>>(data_gpu, aug_cols, j);
+    fixRow<<<1, aug_cols>>>(data_gpu, aug_cols, Aij, j);
+    auto_throw(cudaDeviceSynchronize());
+
+    fixColumn<<<aug_cols, rows>>>(data_gpu, aug_cols, Aij, j);
     auto_throw(cudaDeviceSynchronize());
   }
 
