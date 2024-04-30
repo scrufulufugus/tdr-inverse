@@ -36,6 +36,14 @@ __global__ void pivot(matrix_t *matrix, int cols, int rows, int j) {
 __global__ void storeAij(matrix_t *matrix, int size, matrix_t *Aij, int colId) {
   int rowId = threadIdx.x;
   Aij[rowId] = matrix[size*rowId + colId];
+#ifdef DEBUG
+  printf("0. A[%d][%d] = %f\n", rowId, colId, Aij[rowId]);
+#endif
+
+  if (rowId == colId)
+    matrix[size*rowId + colId] = 1.0;
+  else
+    matrix[size*rowId + colId] = 0.0;
 }
 
 // (c) Sharma 2013
@@ -113,12 +121,7 @@ int main(int argc, char *argv[]) {
   cudaEventCreate(&start);
   cudaEventCreate(&stop);
 
-  // Convert matrix to augmented form
-  std::vector<matrix_t> aug;
-  size_t aug_cols = 2 * cols;
-  matrixToAug(data, aug, rows, cols);
-
-  matrix_t *data_gpu = copy_to_gpu<matrix_t>(aug.data(), rows * aug_cols);
+  matrix_t *data_gpu = copy_to_gpu<matrix_t>(data.data(), rows * cols);
   matrix_t *Aij;
   auto_throw(cudaMalloc(&Aij, rows * sizeof(matrix_t)));
 
@@ -126,16 +129,16 @@ int main(int argc, char *argv[]) {
 
   // Main program flow
   for (size_t j = 0; j < rows; j++) {
-    pivot<<<1, aug_cols>>>(data_gpu, aug_cols, rows, j);
+    // pivot<<<1, cols>>>(data_gpu, cols, rows, j);
+    // auto_throw(cudaDeviceSynchronize());
+
+    storeAij<<<1, rows>>>(data_gpu, cols, Aij, j);
     auto_throw(cudaDeviceSynchronize());
 
-    storeAij<<<1, rows>>>(data_gpu, aug_cols, Aij, j);
+    fixRow<<<1, cols>>>(data_gpu, cols, Aij, j);
     auto_throw(cudaDeviceSynchronize());
 
-    fixRow<<<1, aug_cols>>>(data_gpu, aug_cols, Aij, j);
-    auto_throw(cudaDeviceSynchronize());
-
-    fixColumn<<<aug_cols, rows>>>(data_gpu, aug_cols, Aij, j);
+    fixColumn<<<cols, rows>>>(data_gpu, cols, Aij, j);
     auto_throw(cudaDeviceSynchronize());
   }
 
@@ -147,11 +150,7 @@ int main(int argc, char *argv[]) {
 
   printf("Runtime: %f\n", msec);
 
-  copy_from_gpu<matrix_t>(aug.data(), data_gpu, rows * aug_cols);
-
-  // Convert matrix from augmented form
-  data.clear();
-  augToMatrix(data, aug, rows, cols);
+  copy_from_gpu<matrix_t>(data.data(), data_gpu, rows * cols);
 
 #ifdef DEBUG
   printMatrix(data.data(), rows, cols);
