@@ -46,30 +46,33 @@ struct FixRow {
 #endif
 
     for (size_t i = 0; i < prog.device.size.col; i++) {
-      matrix_t col = prog.device.Aij[i];
-      if (col != 0) {
-        prog.template async<FixCol>(rowId, i, colId, col);
-      }
+      prog.template async<FixCol>(rowId, i, colId);
     }
   }
 };
 
 struct FixCol {
-  using Type = void(*)(size_t colId, size_t i, size_t j, matrix_t col);
+  using Type = void(*)(size_t colId, size_t i, size_t j);
 
   template<typename PROGRAM>
-  __device__ static void eval(PROGRAM prog, size_t colId, size_t i, size_t j, matrix_t col) {
+  __device__ static void eval(PROGRAM prog, size_t colId, size_t i, size_t j) {
     size_t size = prog.device.size.row;
-    matrix_t colj    = prog.device.matrix[i*size + j];
-    matrix_t AColIdj = prog.device.matrix[colId*size + j];
-    if (i != colId) {
-      colj -= AColIdj * col;
+    matrix_t col = prog.device.Aij[i];
+    matrix_t colj;
+    matrix_t AColIdj;
+
+    if (col != 0) {
+      colj    = prog.device.matrix[i*size + j];
+      AColIdj = prog.device.matrix[colId*size + j];
+      if (i != colId) {
+        colj -= AColIdj * col;
 
 #ifdef DEBUG
-      printf("3. matrix[%lu][%lu] -= %f * %f = %f\n", i, j, AColIdj, col, colj);
+        printf("3. matrix[%lu][%lu] -= %f * %f = %f\n", i, j, AColIdj, col, colj);
 #endif
+        prog.device.matrix[i*size + j] = colj;
+      }
     }
-    prog.device.matrix[i*size + j] = colj;
   }
 };
 
