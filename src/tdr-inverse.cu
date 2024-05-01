@@ -182,8 +182,9 @@ int main(int argc, char *argv[]) {
 #endif
 
   // Timing objects
-  cudaEvent_t start, stop;
+  cudaEvent_t start, loop, stop;
   cudaEventCreate(&start);
+  cudaEventCreate(&loop);
   cudaEventCreate(&stop);
 
   InverseState ds;
@@ -227,6 +228,8 @@ int main(int argc, char *argv[]) {
     cudaDeviceSynchronize();
     host::check_error();
 
+  cudaEventRecord(loop);
+
   for (size_t cj = 0; cj < ds.size.col; cj++) {
     j << cj; // Push current row to gpu
 
@@ -250,10 +253,11 @@ int main(int argc, char *argv[]) {
 
   cudaEventSynchronize(stop);
   float msec;
+
+  cudaEventElapsedTime(&msec, start, loop);
+  printf("Initialize : %f\n", msec);
   cudaEventElapsedTime(&msec, start, stop);
-
-  printf("Runtime: %f\n", msec);
-
+  printf("Runtime    : %f\n", msec);
 
   data.clear();
   data_gpu >> data;
