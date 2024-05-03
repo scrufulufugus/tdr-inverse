@@ -241,6 +241,12 @@ int main(int argc, char *argv[]) {
 
   cudaEventRecord(loop);
 
+  int block_count = 1, thread_count = rows;
+  if (rows > 1024) {
+    block_count = (rows / 1024) + 1;
+    thread_count = 1024;
+  }
+
   for (size_t cj = 0; cj < ds.size.col; cj++) {
     j << cj; // Push current row to gpu
 
@@ -248,7 +254,7 @@ int main(int argc, char *argv[]) {
     iter::AtomicIter<unsigned int> host_iter(0,ds.size.row);
     iterator << host_iter;
 
-    storeAij<<<1, rows>>>(ds.matrix, ds.size.row, ds.Aij, cj);
+    storeAij<<<block_count, thread_count>>>(ds.matrix, ds.size.row, ds.Aij, cj);
     cudaDeviceSynchronize();
     host::check_error();
 
