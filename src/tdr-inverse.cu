@@ -7,6 +7,8 @@
 
 using namespace util;
 
+#define THRESHOLD 64
+
 __global__ void storeAij(matrix_t *matrix, int size, matrix_t *Aij, int colId) {
   int rowId = threadIdx.x;
   Aij[rowId] = matrix[size*rowId + colId];
@@ -54,28 +56,29 @@ struct FixCol {
 
   template<typename PROGRAM>
   __device__ static void eval(PROGRAM prog, size_t colId, size_t i_start, size_t i_end, size_t j) {
-    if (i_end != i_start) {
+    if (i_end - i_start > THRESHOLD) {
       size_t mid = (i_start + i_end) / 2;
       prog.template async<FixCol>(colId, i_start, mid, j);
       prog.template async<FixCol>(colId, mid+1, i_end, j);
       return;
     }
-    size_t i = i_start;
     size_t size = prog.device.size.row;
-    matrix_t col = prog.device.Aij[i];
-    matrix_t colj;
-    matrix_t AColIdj;
+    for (size_t i = i_start; i <= i_end; i++) {
+      matrix_t col = prog.device.Aij[i];
+      matrix_t colj;
+      matrix_t AColIdj;
 
-    if (col != 0) {
-      colj    = prog.device.matrix[i*size + j];
-      AColIdj = prog.device.matrix[colId*size + j];
-      if (i != colId) {
-        colj -= AColIdj * col;
+      if (col != 0) {
+        colj    = prog.device.matrix[i*size + j];
+        AColIdj = prog.device.matrix[colId*size + j];
+        if (i != colId) {
+          colj -= AColIdj * col;
 
 #ifdef DEBUG
-        printf("3. matrix[%lu][%lu] -= %f * %f = %f\n", i, j, AColIdj, col, colj);
+          printf("3. matrix[%lu][%lu] -= %f * %f = %f\n", i, j, AColIdj, col, colj);
 #endif
-        prog.device.matrix[i*size + j] = colj;
+          prog.device.matrix[i*size + j] = colj;
+        }
       }
     }
   }
