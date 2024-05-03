@@ -250,6 +250,9 @@ int main(int argc, char *argv[]) {
     exec<ProgType>(instance,240,65536);
     cudaDeviceSynchronize();
     host::check_error();
+
+    // Allows program to be re-execed
+    instance.clear_flags();
   }
 
   cudaEventRecord(stop);
