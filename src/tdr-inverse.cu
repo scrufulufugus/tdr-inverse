@@ -45,17 +45,22 @@ struct FixRow {
     printf("2. matrix[%lu][%lu] /= %f = %f\n", rowId, colId, Aii, Ri);
 #endif
 
-    for (size_t i = 0; i < prog.device.size.col; i++) {
-      prog.template async<FixCol>(rowId, i, colId);
-    }
+    prog.template async<FixCol>(rowId, 0, prog.device.size.col-1, colId);
   }
 };
 
 struct FixCol {
-  using Type = void(*)(size_t colId, size_t i, size_t j);
+  using Type = void(*)(size_t colId, size_t i_start, size_t i_end, size_t j);
 
   template<typename PROGRAM>
-  __device__ static void eval(PROGRAM prog, size_t colId, size_t i, size_t j) {
+  __device__ static void eval(PROGRAM prog, size_t colId, size_t i_start, size_t i_end, size_t j) {
+    if (i_end != i_start) {
+      size_t mid = (i_start + i_end) / 2;
+      prog.template async<FixCol>(colId, i_start, mid, j);
+      prog.template async<FixCol>(colId, mid+1, i_end, j);
+      return;
+    }
+    size_t i = i_start;
     size_t size = prog.device.size.row;
     matrix_t col = prog.device.Aij[i];
     matrix_t colj;
