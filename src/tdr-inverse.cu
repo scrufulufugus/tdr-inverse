@@ -143,7 +143,7 @@ struct InverseSpec {
   template<typename PROGRAM>
   __device__ static bool make_work(PROGRAM prog){
 
-      size_t size = prog.device.size.row;
+      size_t size = 1u;
 
       unsigned int iter_step_length = size;
 
