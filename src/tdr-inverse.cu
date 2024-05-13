@@ -261,9 +261,11 @@ int main(int argc, char *argv[]) {
     // Execute the instance using 240 work groups, with each work group performing up to
     // 65536 promise executions per thread before halting. If all promises are exhausted
     // before this, the program exits early.
-    exec<ProgType>(instance,240,65536);
-    cudaDeviceSynchronize();
-    host::check_error();
+    do {
+      exec<ProgType>(instance,240,65536);
+      cudaDeviceSynchronize();
+      host::check_error();
+    } while (!instance.complete());
 
     // Allows program to be re-execed
     instance.clear_flags();
