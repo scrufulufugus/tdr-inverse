@@ -11,6 +11,9 @@ using namespace util;
 
 __global__ void storeAij(matrix_t *matrix, size_t size, matrix_t *Aij, size_t colId) {
   size_t rowId = blockIdx.x * blockDim.x + threadIdx.x;
+  if(rowId >= size) {
+    return;
+  }
   Aij[rowId] = matrix[size*rowId + colId];
 #ifdef DEBUG
   printf("0. A[%d][%d] = %f\n", rowId, colId, Aij[rowId]);
