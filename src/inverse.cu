@@ -26,18 +26,18 @@ __global__ void pivot(matrix_t *matrix, size_t cols, size_t rows, size_t j) {
   if (swapRow != j) {
     __syncthreads();
 #ifdef DEBUG
-    printf("1. swap(M[%d][%d], M[%d][%d]) = swap(%f, %f)\n", j, colId, swapRow, colId,
+    printf("1. swap(M[%lu][%lu], M[%lu][%lu]) = swap(%f, %f)\n", j, colId, swapRow, colId,
            matrix[cols * j + colId], matrix[cols * swapRow + colId]);
 #endif
     matrix[cols * swapRow + colId] = matrix[cols * j + colId];
   }
 }
 
-__global__ void storeAij(matrix_t *matrix, size_t size, matrix_t *Aij, size_t colId) {
-  size_t rowId = threadIdx.x;
+__global__ void storeAij(matrix_t *matrix, size_t size, matrix_t *Aij, size_t colId, size_t offset) {
+  size_t rowId = threadIdx.x + offset;
   Aij[rowId] = matrix[size*rowId + colId];
 #ifdef DEBUG
-  printf("0. A[%d][%d] = %f\n", rowId, colId, Aij[rowId]);
+  printf("0. A[%lu][%lu] = %f\n", rowId, colId, Aij[rowId]);
 #endif
 
   if (rowId == colId)
@@ -47,55 +47,57 @@ __global__ void storeAij(matrix_t *matrix, size_t size, matrix_t *Aij, size_t co
 }
 
 // (c) Sharma 2013
-__global__ void fixRow(matrix_t *matrix, size_t size, matrix_t *Aij, size_t rowId) {
+__global__ void fixRow(matrix_t *matrix, size_t size, matrix_t *Aij, size_t rowId, size_t offset) {
   // the ith row of the matrix
   __shared__ matrix_t Ri[MAX_BLOCK_SIZE];
   // The diagonal element for ith row
   __shared__ matrix_t Aii;
-  size_t colId = threadIdx.x;
-  Ri[colId] = matrix[size * rowId + colId];
+  size_t sharedColId = threadIdx.x;
+  size_t colId = sharedColId + offset;
+  Ri[sharedColId] = matrix[size * rowId + colId];
   Aii = Aij[rowId];
 
 #ifdef DEBUG
-  printf("1. matrix[%d][%d] = %f\n", rowId, colId, Ri[colId]);
+  printf("1. matrix[%lu][%lu] = %f\n", rowId, colId, Ri[sharedColId]);
 #endif
   __syncthreads();
   // Divide the whole row by the diagonal element making sure it is not 0
-  Ri[colId] = Ri[colId] / Aii;
-  matrix[size * rowId + colId] = Ri[colId];
+  Ri[sharedColId] = Ri[sharedColId] / Aii;
+  matrix[size * rowId + colId] = Ri[sharedColId];
 #ifdef DEBUG
-  printf("2. matrix[%d][%d] /= %f = %f\n", rowId, colId, Aii, Ri[colId]);
+  printf("2. matrix[%lu][%lu] /= %f = %f\n", rowId, colId, Aii, Ri[sharedColId]);
 #endif
 }
 
 // (c) Sharma 2013
-__global__ void fixColumn(matrix_t *matrix, size_t size, matrix_t *Aij, size_t colId) {
-  size_t i = threadIdx.x;
-  size_t j = blockIdx.x;
+__global__ void fixColumn(matrix_t *matrix, size_t size, matrix_t *Aij, size_t colId, size_t rowOffset, size_t colOffset) {
+  size_t sharedI = threadIdx.x;
+  size_t i = sharedI + rowOffset;
+  size_t j = blockIdx.x + colOffset;
   // The colId column
   __shared__ matrix_t col[MAX_BLOCK_SIZE];
   // The jth element of the colId row
   __shared__ matrix_t AColIdj;
   // The jth column
   __shared__ matrix_t colj[MAX_BLOCK_SIZE];
-  col[i] = Aij[i];
+  col[sharedI] = Aij[i];
   __syncthreads();
-  if (col[i] != 0) {
-    colj[i] = matrix[i * size + j];
+  if (col[sharedI] != 0) {
+    colj[sharedI] = matrix[i * size + j];
     AColIdj = matrix[colId * size + j];
     if (i != colId) {
 #if   PRECISION == 1
-      colj[i] = fmaf(-1. * AColIdj, col[i], colj[i]);
+      colj[i] = fmaf(-1. * AColIdj, col[sharedI], colj[sharedI]);
 #elif PRECISION == 2
-      colj[i] = fma(-1. * AColIdj, col[i], colj[i]);
+      colj[sharedI] = fma(-1. * AColIdj, col[sharedI], colj[sharedI]);
 #endif
-      //colj[i] = colj[i] - AColIdj * col[i];
+      //colj[i] = colj[i] - AColIdj * col[sharedI];
 #ifdef DEBUG
-      printf("3. matrix[%d][%d] -= %f * %f = %f\n", i, j, AColIdj, col[i],
-             colj[i]);
+      printf("3. matrix[%lu][%lu] -= %f * %f = %f\n", i, j, AColIdj, col[sharedI],
+             colj[sharedI]);
 #endif
     }
-    matrix[i * size + j] = colj[i];
+    matrix[i * size + j] = colj[sharedI];
   }
 }
 
@@ -127,18 +129,47 @@ int main(int argc, char *argv[]) {
 
   cudaEventRecord(start);
 
+  // Get the number of kernel launches we need to do
+  size_t row_kernels = 1;
+  if (rows > MAX_BLOCK_SIZE) {
+    row_kernels = rows / MAX_BLOCK_SIZE;
+    if (rows % MAX_BLOCK_SIZE != 0) {
+      row_kernels++;
+    }
+  }
+  size_t col_kernels = 1;
+  if (cols > MAX_BLOCK_SIZE) {
+    col_kernels = rows / MAX_BLOCK_SIZE;
+    if (cols % MAX_BLOCK_SIZE != 0) {
+      col_kernels++;
+    }
+  }
+  fprintf(stderr, "Kernel count: (%lu, %lu)\n", row_kernels, col_kernels);
+
   // Main program flow
   for (size_t j = 0; j < rows; j++) {
     // pivot<<<1, cols>>>(data_gpu, cols, rows, j);
     // auto_throw(cudaDeviceSynchronize());
 
-    storeAij<<<1, rows>>>(data_gpu, cols, Aij, j);
+    for (size_t i = 0; i < row_kernels; i++) {
+      size_t count = std::min(rows - i * MAX_BLOCK_SIZE, (size_t)MAX_BLOCK_SIZE);
+      storeAij<<<1, count>>>(data_gpu, cols, Aij, j, i * MAX_BLOCK_SIZE);
+    }
     auto_throw(cudaDeviceSynchronize());
 
-    fixRow<<<1, cols>>>(data_gpu, cols, Aij, j);
+    for (size_t i = 0; i < col_kernels; i++) {
+      size_t count = std::min(cols - i * MAX_BLOCK_SIZE, (size_t)MAX_BLOCK_SIZE);
+      fixRow<<<1, count>>>(data_gpu, cols, Aij, j, i * MAX_BLOCK_SIZE);
+    }
     auto_throw(cudaDeviceSynchronize());
 
-    fixColumn<<<cols, rows>>>(data_gpu, cols, Aij, j);
+    for (size_t i = 0; i < col_kernels; i++) {
+      size_t col_count = std::min(cols - i * MAX_BLOCK_SIZE, (size_t)MAX_BLOCK_SIZE);
+      for (size_t k = 0; k < row_kernels; k++) {
+        size_t row_count = std::min(rows - k * MAX_BLOCK_SIZE, (size_t)MAX_BLOCK_SIZE);
+        fixColumn<<<col_count, row_count>>>(data_gpu, cols, Aij, j, k * MAX_BLOCK_SIZE, i * MAX_BLOCK_SIZE);
+      }
+    }
     auto_throw(cudaDeviceSynchronize());
   }
 
