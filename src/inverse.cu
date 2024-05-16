@@ -8,15 +8,15 @@ using namespace helpers;
 
 #define MAX_BLOCK_SIZE 1024
 
-__global__ void pivot(matrix_t *matrix, int cols, int rows, int j) {
+__global__ void pivot(matrix_t *matrix, size_t cols, size_t rows, size_t j) {
   // the ith row of the matrix
   __shared__ matrix_t Ri[MAX_BLOCK_SIZE];
-  int colId = threadIdx.x;
+  size_t colId = threadIdx.x;
   Ri[colId] = matrix[cols * j + colId];
 
   // Pivot
-  int swapRow = j;
-  for (int i = j; i < rows; i++) {
+  size_t swapRow = j;
+  for (size_t i = j; i < rows; i++) {
     if (abs(matrix[cols*i + j]) > abs(matrix[cols*swapRow + j])) {
       swapRow = i;
     }
@@ -33,8 +33,8 @@ __global__ void pivot(matrix_t *matrix, int cols, int rows, int j) {
   }
 }
 
-__global__ void storeAij(matrix_t *matrix, int size, matrix_t *Aij, int colId) {
-  int rowId = threadIdx.x;
+__global__ void storeAij(matrix_t *matrix, size_t size, matrix_t *Aij, size_t colId) {
+  size_t rowId = threadIdx.x;
   Aij[rowId] = matrix[size*rowId + colId];
 #ifdef DEBUG
   printf("0. A[%d][%d] = %f\n", rowId, colId, Aij[rowId]);
@@ -47,12 +47,12 @@ __global__ void storeAij(matrix_t *matrix, int size, matrix_t *Aij, int colId) {
 }
 
 // (c) Sharma 2013
-__global__ void fixRow(matrix_t *matrix, int size, matrix_t *Aij, int rowId) {
+__global__ void fixRow(matrix_t *matrix, size_t size, matrix_t *Aij, size_t rowId) {
   // the ith row of the matrix
   __shared__ matrix_t Ri[MAX_BLOCK_SIZE];
   // The diagonal element for ith row
   __shared__ matrix_t Aii;
-  int colId = threadIdx.x;
+  size_t colId = threadIdx.x;
   Ri[colId] = matrix[size * rowId + colId];
   Aii = Aij[rowId];
 
@@ -69,9 +69,9 @@ __global__ void fixRow(matrix_t *matrix, int size, matrix_t *Aij, int rowId) {
 }
 
 // (c) Sharma 2013
-__global__ void fixColumn(matrix_t *matrix, int size, matrix_t *Aij, int colId) {
-  int i = threadIdx.x;
-  int j = blockIdx.x;
+__global__ void fixColumn(matrix_t *matrix, size_t size, matrix_t *Aij, size_t colId) {
+  size_t i = threadIdx.x;
+  size_t j = blockIdx.x;
   // The colId column
   __shared__ matrix_t col[MAX_BLOCK_SIZE];
   // The jth element of the colId row
