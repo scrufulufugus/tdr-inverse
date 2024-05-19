@@ -103,16 +103,25 @@ __global__ void fixColumn(matrix_t *matrix, size_t size, matrix_t *Aij, size_t c
 
 int main(int argc, char *argv[]) {
 
+  std::string format;
   std::ifstream matrixFile;
   std::ifstream solnFile;
-  get_args(argc, argv, matrixFile, solnFile);
+  get_args(argc, argv, matrixFile, solnFile, format);
+
 
   size_t rows, cols;
   std::vector<matrix_t> soln;
-  readCSV(solnFile, soln, rows, cols);
-
   std::vector<matrix_t> data;
-  readCSV(matrixFile, data, rows, cols);
+
+  if(format == "csv"){
+    readCSV(solnFile, soln, rows, cols);
+    readCSV(matrixFile, data, rows, cols);
+  } else if (format == "mtx"){
+    readMTX(solnFile, soln, rows, cols);
+    readMTX(matrixFile, data, rows, cols);
+  } else {
+    throw std::runtime_error("File format not recognized.");
+  }
 
 #ifdef DEBUG
   printMatrix(data.data(), rows, cols);

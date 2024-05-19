@@ -20,9 +20,11 @@ typedef double matrix_t;
 
 void bad_usage(char *exec);
 
-void get_args(int argc, char *argv[], std::ifstream &matrixFile, std::ifstream &solnFile);
+void get_args(int argc, char *argv[], std::ifstream &matrixFile, std::ifstream &solnFile, std::string &format);
 
 void readCSV(std::istream &file, std::vector<matrix_t> &data, size_t &rows, size_t &cols);
+
+void readMTX(std::istream &file, std::vector<matrix_t> &data, size_t &rows, size_t &cols);
 
 void matrixToAug(const std::vector<matrix_t> &data, std::vector<matrix_t> &aug, const size_t &rows, const size_t &cols);
 

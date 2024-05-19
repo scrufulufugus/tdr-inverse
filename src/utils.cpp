@@ -17,6 +17,19 @@ void bad_usage(char *exec) {
   std::exit(1);
 }
 
+// desc: Returns the extension at the end of a file path string. If
+//       no extension is found, an empty string is returned
+//  pre: None
+// post: In description
+std::string get_extension(std::string path){
+  for(int i=path.size()-1; i>=0; i--) {
+    if(path[i]=='.') {
+      return path.substr(i+1);
+    }
+  }
+  return "";
+}
+
 // desc: Returns the value and thread counts provided by the supplied
 //       command-line arguments.
 //  pre: There should be exactly two arguments, both positive integers.
@@ -24,7 +37,7 @@ void bad_usage(char *exec) {
 //       status 1
 // post: In description
 void get_args(int argc, char *argv[], std::ifstream &matrixFile,
-              std::ifstream &solnFile) {
+              std::ifstream &solnFile, std::string& format) {
   if (argc <= 2) {
     fprintf(stderr, "Too few args\n");
     bad_usage(argv[0]);
@@ -47,6 +60,8 @@ void get_args(int argc, char *argv[], std::ifstream &matrixFile,
     fprintf(stderr, "Cannot read file: %s\n", soln_filename.c_str());
     bad_usage(argv[0]);
   }
+  format = get_extension(matrix_filename);
+
 }
 
 // Read a comma seperated CSV into memory.
@@ -65,6 +80,41 @@ void readCSV(std::istream &file, std::vector<matrix_t> &data,
       cols++;
     }
     rows++;
+  }
+  printf("Read a %lu x %lu matrix\n", rows, cols);
+}
+
+
+// Read a comma seperated CSV into memory.
+void readMTX(std::istream &file, std::vector<matrix_t> &data,
+                      size_t &rows, size_t &cols) {
+  rows = 0;
+  cols = 0;
+  std::string line;
+
+  bool first = true;
+  int i, j;
+  matrix_t val;
+  while (getline(file, line)) {
+    std::stringstream line_s(line);
+    if(line.size() == 0 ) {
+      continue;
+    } else if (line[0] == '%') {
+      continue;
+    } else if (first) {
+      if(!(line_s >> rows >> cols)) {
+        throw std::runtime_error("Failed to parse matrix dimensions.");
+      }
+      data.resize(rows*cols);
+      for(matrix_t& val : data) {
+        val = 0;
+      }
+      first = false;
+    } else if (line_s >> i >> j >> val) {
+      data[(i-1)*cols+(j-1)] = val;
+    } else {
+        throw std::runtime_error("Failed to parse matrix value.");
+    }
   }
   printf("Read a %lu x %lu matrix\n", rows, cols);
 }
@@ -116,8 +166,8 @@ void printError(matrix_t *matrix, matrix_t *soln, size_t rows, size_t cols) {
       error = std::abs(matrix[idx] - soln[idx]) / std::max(std::abs(soln[idx]), std::abs(matrix[idx]));
       mae += std::abs((long double)matrix[idx] - soln[idx]);
       if (!std::isfinite(matrix[idx]) || error > 0.0000001) {
-        fprintf(stderr, "matrix[%zu][%zu] expected % E got % E Error: %LE\n", i,
-                j, soln[idx], matrix[idx], error);
+        //fprintf(stderr, "matrix[%zu][%zu] expected % E got % E Error: %LE\n", i,
+        //        j, soln[idx], matrix[idx], error);
       }
     }
   }

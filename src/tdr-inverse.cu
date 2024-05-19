@@ -7,16 +7,18 @@
 
 using namespace util;
 
-#define THRESHOLD 64
+#define THRESHOLD 1024
 
-__global__ void storeAij(matrix_t *matrix, size_t size, matrix_t *Aij, size_t colId) {
-  size_t rowId = blockIdx.x * blockDim.x + threadIdx.x;
+using index_t = size_t;
+
+__global__ void storeAij(matrix_t *matrix, index_t size, matrix_t *Aij, index_t colId) {
+  index_t rowId = blockIdx.x * blockDim.x + threadIdx.x;
   if(rowId >= size) {
     return;
   }
   Aij[rowId] = matrix[size*rowId + colId];
 #ifdef DEBUG
-  printf("0. A[%d][%d] = %f\n", rowId, colId, Aij[rowId]);
+  printf("0. A[%ld][%ld] = %f\n", rowId, colId, Aij[rowId]);
 #endif
 
   if (rowId == colId)
@@ -25,17 +27,18 @@ __global__ void storeAij(matrix_t *matrix, size_t size, matrix_t *Aij, size_t co
     matrix[size*rowId + colId] = 0.0;
 }
 
-//struct Inverse { matrix_t *matrix, size_t size, size_t loc };
+//struct Inverse { matrix_t *matrix, index_t size, size_t loc };
 
 struct FixRow;
 struct FixCol;
+struct SplitCol;
 
 struct FixRow {
-  using Type = void(*)(size_t rowId, size_t colId);
+  using Type = void(*)(index_t rowId, size_t colId);
 
   template<typename PROGRAM>
-  __device__ static void eval(PROGRAM prog, size_t rowId, size_t colId) {
-    size_t size = prog.device.size.row;
+  __device__ static void eval(PROGRAM prog, index_t rowId, size_t colId) {
+    index_t size = prog.device.size.row;
     matrix_t Ri  = prog.device.matrix[size*rowId + colId];
     matrix_t Aii = prog.device.Aij[rowId];
 
@@ -50,29 +53,40 @@ struct FixRow {
     printf("2. matrix[%lu][%lu] /= %f = %f\n", rowId, colId, Aii, Ri);
 #endif
 
-    prog.template async<FixCol>(rowId, 0, prog.device.size.col-1, colId);
+    if( Ri != 0.0 ) {
+      prog.template async<SplitCol>(rowId, 0, prog.device.size.col-1, colId);
+    }
+  }
+};
+
+struct SplitCol {
+  using Type = void(*)(index_t colId, index_t i_start, index_t i_end, index_t j);
+
+  template<typename PROGRAM>
+  __device__ static void eval(PROGRAM prog, index_t colId, index_t i_start, index_t i_end, index_t j) {
+    if (i_end - i_start > THRESHOLD) {
+      index_t mid = (i_start + i_end) / 2;
+      prog.template async<SplitCol>(colId, i_start, mid, j);
+      prog.template async<SplitCol>(colId, mid+1, i_end, j);
+    } else {
+      prog.template async<FixCol>(colId, i_start, i_end, j);
+    }
   }
 };
 
 struct FixCol {
-  using Type = void(*)(size_t colId, size_t i_start, size_t i_end, size_t j);
+  using Type = void(*)(index_t colId, index_t i_start, index_t i_end, index_t j);
 
   template<typename PROGRAM>
-  __device__ static void eval(PROGRAM prog, size_t colId, size_t i_start, size_t i_end, size_t j) {
-    if (i_end - i_start > THRESHOLD) {
-      size_t mid = (i_start + i_end) / 2;
-      prog.template async<FixCol>(colId, i_start, mid, j);
-      prog.template async<FixCol>(colId, mid+1, i_end, j);
-      return;
-    }
-    size_t size = prog.device.size.row;
-    for (size_t i = i_start; i <= i_end; i++) {
+  __device__ static void eval(PROGRAM prog, index_t colId, index_t i_start, index_t i_end, index_t j) {
+    index_t size = prog.device.size.row;
+    for (index_t i = i_start; i <= i_end; i++) {
       matrix_t col = prog.device.Aij[i];
       matrix_t colj;
       matrix_t AColIdj;
 
       if (col != 0) {
-        colj    = prog.device.matrix[i*size + j];
+        colj    = prog.device.matrix[    i*size + j];
         AColIdj = prog.device.matrix[colId*size + j];
         if (i != colId) {
           colj -= AColIdj * col;
@@ -101,12 +115,12 @@ struct InverseState {
 };
 
 struct InverseSpec {
-  typedef OpUnion<FixRow,FixCol>       OpSet;
+  typedef OpUnion<FixRow,SplitCol,FixCol>       OpSet;
   typedef           InverseState DeviceState;
 
-  static const size_t STASH_SIZE =   16;
-  static const size_t FRAME_SIZE = 8191;
-  static const size_t  POOL_SIZE = 8191;
+  static const index_t STASH_SIZE =   16;
+  static const index_t FRAME_SIZE = 8191;
+  static const index_t  POOL_SIZE = 8191;
 
   /*
   // Defines the initialization function for programs of type 'ProgType'. This function is called by
@@ -149,7 +163,7 @@ struct InverseSpec {
   template<typename PROGRAM>
   __device__ static bool make_work(PROGRAM prog){
 
-      size_t size = 1u;
+      index_t size = 1u;
 
       unsigned int iter_step_length = size;
 
@@ -157,8 +171,8 @@ struct InverseSpec {
 
       unsigned int index;
       while(iter.step(index)){
-        size_t rowId = *(prog.device.j);
-        size_t colId = index;
+        index_t rowId = *(prog.device.j);
+        index_t colId = index;
         prog.template async<FixRow>(rowId, colId);
       }
 
@@ -180,16 +194,25 @@ int main(int argc, char *argv[]) {
 
   cli::ArgSet args(argc, argv);
 
+  std::string format;
   std::ifstream matrixFile;
   std::ifstream solnFile;
-  get_args(argc, argv, matrixFile, solnFile);
+  get_args(argc, argv, matrixFile, solnFile, format);
+
 
   size_t rows, cols;
   std::vector<matrix_t> soln;
-  readCSV(solnFile, soln, rows, cols);
-
   std::vector<matrix_t> data;
-  readCSV(matrixFile, data, rows, cols);
+
+  if(format == "csv"){
+    readCSV(solnFile, soln, rows, cols);
+    readCSV(matrixFile, data, rows, cols);
+  } else if (format == "mtx"){
+    readMTX(solnFile, soln, rows, cols);
+    readMTX(matrixFile, data, rows, cols);
+  } else {
+    throw std::runtime_error("File format not recognized.");
+  }
 
 #ifdef DEBUG
   printMatrix(data.data(), rows, cols);
@@ -250,7 +273,7 @@ int main(int argc, char *argv[]) {
     thread_count = 1024;
   }
 
-  for (size_t cj = 0; cj < ds.size.col; cj++) {
+  for (index_t cj = 0; cj < ds.size.col; cj++) {
     j << cj; // Push current row to gpu
 
     // Reset iter
@@ -265,10 +288,11 @@ int main(int argc, char *argv[]) {
     // 65536 promise executions per thread before halting. If all promises are exhausted
     // before this, the program exits early.
     do {
-      exec<ProgType>(instance,240,65536);
+      exec<ProgType>(instance,2048,65536);
       cudaDeviceSynchronize();
       host::check_error();
     } while (!instance.complete());
+
 
     // Allows program to be re-execed
     instance.clear_flags();
