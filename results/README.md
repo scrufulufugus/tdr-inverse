@@ -15,7 +15,7 @@ conda activate tdr_inverse_results
 
 ### Benchmarks
 
-The `bench.sh` calls [bench.py]() with the necessary arguments to record Mean Absolute Error and Runtime. The other bench.py arguments, such as input/output csv and the bench command must be passed to `bench.sh`:
+The `bench.sh` calls [bench.py](https://github.com/scrufulufugus/bench.py) with the necessary arguments to record Mean Absolute Error and Runtime. The other bench.py arguments, such as input/output csv and the bench command must be passed to `bench.sh`:
 
 ```sh
 ./bench.sh -i input.csv -o output.csv -- ../bin/{program} ../tests/{n}x{n}{,_soln}.csv
