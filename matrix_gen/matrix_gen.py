@@ -10,7 +10,7 @@ SAVE_DIR = "./out"
 np.set_printoptions(precision=7, suppress=True)
 
 # Sizes of matrices to generate
-sizes = [ 3, 4, 6, 10, 50, 100, 256, 512, 1024, 2000, 4096 ]
+sizes = [ 3, 4, 6, 10, 50, 100, 256, 512, 1024, 2000, 2048, 3000, 4096 ]
 N = 100 # Max element value
 np.random.seed(57) # Start with a seed
 

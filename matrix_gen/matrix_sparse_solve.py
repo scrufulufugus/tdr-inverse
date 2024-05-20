@@ -5,10 +5,11 @@ from scipy.sparse import linalg
 import os
 import numpy as np
 
-SAVE_DIR = "./out"
+SAVE_DIR  = "./out"
+INPUT_DIR = "./input"
 
-for path in os.listdir("./input"):
-    path = "./input/"+path
+for path in os.listdir(INPUT_DIR):
+    path = INPUT_DIR+path
     if not str(path).endswith(".mtx"):
         continue
     print(path)
