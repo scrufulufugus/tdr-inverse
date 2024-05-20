@@ -105,12 +105,5 @@ int main(int argc, char *argv[]) {
 
   printError(data.data(), soln.data(), rows, cols);
 
-  for (size_t i = 0; i < rows; i++) {
-    for (size_t j = 0; j < cols; j++) {
-      printf("%.*E,", SIGFIGS, data[i*cols + j]);
-    }
-    printf("\n");
-  }
-
   return 0;
 }
