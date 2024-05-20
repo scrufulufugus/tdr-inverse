@@ -1,3 +1,7 @@
 [submodule "submodules/harmonize"]
 	path = submodules/harmonize
 	url = https://github.com/CEMeNT-PSAAP/harmonize.git
+[submodule "submodules/bench"]
+	path = submodules/bench
+	url = https://github.com/scrufulufugus/bench.py.git
+	branch = main
