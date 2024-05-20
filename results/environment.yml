@@ -1,0 +1,10 @@
+name: tdr_inverse_results
+dependencies:
+  - python>=3.11
+  - pandas=2.2
+  - numpy=1.26
+  - ipython
+  - notebook
+  - pip
+  - pip:
+    - scipy==1.13
