@@ -1,7 +1,7 @@
 name: matrix_gen
 dependencies:
-  - python=3.11
-  - scipy
-  - pandas
-  - ipython
-  - notebook
+  - python>=3.11
+  - pandas=2.2
+  - numpy=1.26
+  - pip:
+    - scipy==1.13

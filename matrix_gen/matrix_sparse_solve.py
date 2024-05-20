@@ -1,3 +1,5 @@
+#!/usr/bin/env python3
+
 from scipy.io import mmread, mmwrite
 from scipy.sparse import linalg
 import os
@@ -7,9 +9,9 @@ SAVE_DIR = "./out"
 
 for path in os.listdir("./input"):
     path = "./input/"+path
-    print(path)
     if not str(path).endswith(".mtx"):
         continue
+    print(path)
     mat = mmread(path)
     inv = linalg.inv(mat)
     base = os.path.splitext(os.path.basename(path))[0]
