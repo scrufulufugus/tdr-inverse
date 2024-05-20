@@ -3,5 +3,6 @@ dependencies:
   - python>=3.11
   - pandas=2.2
   - numpy=1.26
+  - pip
   - pip:
     - scipy==1.13
