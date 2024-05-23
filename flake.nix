@@ -20,6 +20,11 @@
         };
       in
       {
+        packages.default = pkgs.callPackage ./. {
+          stdenv = pkgs.gcc11Stdenv;
+          cudaPackages = pkgs.cudaPackages_12_3;
+        };
+
         # TODO: Have to override with no CC since we're building with host CUDA
         #devShells.default = pkgs.mkShell.override { stdenv = pkgs.stdenvNoCC; } {
         devShells.default = pkgs.mkShell.override { stdenv = pkgs.gcc11Stdenv; } {
