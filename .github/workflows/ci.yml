@@ -1,0 +1,21 @@
+name: Nix Build & Test
+
+on:
+  push:
+  pull_request:
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout flake
+        uses: actions/checkout@v4
+
+      - name: Install nix
+        uses: DeterminateSystems/nix-installer-action@main
+
+      - name: Setup magic-nix-cache
+        uses: DeterminateSystems/magic-nix-cache-action@main
+
+      - name: nix build
+        run: nix build '.?submodules=1'
