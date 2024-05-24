@@ -1,0 +1,24 @@
+name: Nix Build & Test
+
+on:
+  push:
+  pull_request:
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout flake
+        uses: actions/checkout@v4
+        with:
+          submodules: recursive
+
+      - name: Install nix
+        uses: DeterminateSystems/nix-installer-action@main
+
+      - name: Setup magic-nix-cache
+        uses: DeterminateSystems/magic-nix-cache-action@main
+
+      # Nix versions >2.18 seem to be broken with submodules
+      - name: nix build
+        run: nix run nixpkgs\#nixVersions.nix_2_18 -- build '.?submodules=1'
