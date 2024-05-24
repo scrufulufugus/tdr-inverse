@@ -21,7 +21,6 @@
       in
       {
         packages.default = pkgs.callPackage ./. {
-          stdenv = pkgs.gcc11Stdenv;
           cudaPackages = pkgs.cudaPackages_12_3;
         };
 

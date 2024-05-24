@@ -1,20 +1,36 @@
 {
   config,
-  stdenv,
   lib,
-  cudaPackages ? { },
+  autoAddDriverRunpath,
+  cudaPackages,
   ...
 }:
-
-stdenv.mkDerivation {
+let
+  inherit (cudaPackages)
+    backendStdenv
+    cuda_cudart
+    cuda_nvcc
+    cudaAtLeast
+    cudaOlder
+    cudatoolkit
+    setupCudaHook
+    ;
+  inherit (lib) getDev getLib getOutput;
+in
+backendStdenv.mkDerivation {
   pname = "tdr-inverse";
   version = "0.0.1";
 
   src = ./.;
 
+  strictDeps = true;
+
   nativeBuildInputs = [
-    cudaPackages.cudatoolkit
+    autoAddDriverRunpath
+    cuda_nvcc
   ];
+
+  buildInputs = [ cuda_cudart ];
 
   # buildPhase = ''
   #   make
