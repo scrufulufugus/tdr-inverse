@@ -29,3 +29,4 @@ The following benchmarks can be run by calling them from this directory (e.g. `.
 
 - `record_all_random.sh`: Benchmarks `inverse`, `cpu-inverse`, and `tdr-inverse` with all matrices from `matrix_gen.py`
 - `record_ez_random.sh`: Benchmarks `inverse`, `cpu-inverse`, and `tdr-inverse` with the smaller matrices from `matrix_gen.py`
+- `record_all_sparse.sh`: Benchmarks `inverse`, `cpu-inverse`, and `tdr-inverse` with the sparse matrices generated with `matrix_sparse_solve.py`
