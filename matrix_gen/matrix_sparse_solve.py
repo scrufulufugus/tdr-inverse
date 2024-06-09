@@ -9,7 +9,7 @@ SAVE_DIR  = "./out"
 INPUT_DIR = "./input"
 
 for path in os.listdir(INPUT_DIR):
-    path = INPUT_DIR+path
+    path = f"{INPUT_DIR}/{path}"
     if not str(path).endswith(".mtx"):
         continue
     print(path)
